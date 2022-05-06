@@ -11,6 +11,8 @@
 #include "flightlib/envs/vec_env_base.hpp"
 #include "flightlib/envs/vision_env/vision_env.hpp"
 #include "flightlib/envs/vision_env/vision_vec_env.hpp"
+#include "flightlib/envs/af_zty_env/af_vec_env.hpp"
+#include "flightlib/envs/af_zty_env/af_env.hpp"
 
 namespace py = pybind11;
 using namespace flightlib;
@@ -88,5 +90,44 @@ PYBIND11_MODULE(flightgym, m) {
     .def("getExtraInfoNames", &VisionVecEnv<VisionEnv>::getExtraInfoNames)
     .def("__repr__", [](const VisionVecEnv<VisionEnv>& a) {
       return "RPG Vision-based Agile Flight Environment";
+    });
+
+  py::class_<AgileFlightVecEnv<AgileFlightEnv>>(m, "AgileFlightEnv_v1")
+    .def(py::init<>())
+    .def(py::init<const std::string&>())
+    .def(py::init<const std::string&, const bool>())
+    .def("reset",
+         static_cast<bool (AgileFlightVecEnv<AgileFlightEnv>::*)(Ref<MatrixRowMajor<>>)>(
+           &AgileFlightVecEnv<AgileFlightEnv>::reset),
+         "reset")
+    .def("reset",
+         static_cast<bool (AgileFlightVecEnv<AgileFlightEnv>::*)(
+           Ref<MatrixRowMajor<>>, bool)>(&AgileFlightVecEnv<AgileFlightEnv>::reset),
+         "reset with random option")
+    .def("step", &AgileFlightVecEnv<AgileFlightEnv>::step)
+    .def("setSeed", &AgileFlightVecEnv<AgileFlightEnv>::setSeed)
+    .def("close", &AgileFlightVecEnv<AgileFlightEnv>::close)
+    .def("isTerminalState", &AgileFlightVecEnv<AgileFlightEnv>::isTerminalState)
+    .def("curriculumUpdate", &AgileFlightVecEnv<AgileFlightEnv>::curriculumUpdate)
+    .def("connectUnity", &AgileFlightVecEnv<AgileFlightEnv>::connectUnity)
+    .def("disconnectUnity", &AgileFlightVecEnv<AgileFlightEnv>::disconnectUnity)
+    .def("updateUnity", &AgileFlightVecEnv<AgileFlightEnv>::updateUnity)
+    .def("getObs", &AgileFlightVecEnv<AgileFlightEnv>::getObs)
+    .def("getQuadAct", &AgileFlightVecEnv<AgileFlightEnv>::getQuadAct)
+    .def("getQuadState", &AgileFlightVecEnv<AgileFlightEnv>::getQuadState)
+    .def("getImage", &AgileFlightVecEnv<AgileFlightEnv>::getImage)
+    .def("getDepthImage", &AgileFlightVecEnv<AgileFlightEnv>::getDepthImage)
+    .def("getNumOfEnvs", &AgileFlightVecEnv<AgileFlightEnv>::getNumOfEnvs)
+    .def("getObsDim", &AgileFlightVecEnv<AgileFlightEnv>::getObsDim)
+    .def("getActDim", &AgileFlightVecEnv<AgileFlightEnv>::getActDim)
+    .def("getRewDim", &AgileFlightVecEnv<AgileFlightEnv>::getRewDim)
+    .def("getImgHeight", &AgileFlightVecEnv<AgileFlightEnv>::getImgHeight)
+    .def("getImgWidth", &AgileFlightVecEnv<AgileFlightEnv>::getImgWidth)
+    .def("getRewardNames", &AgileFlightVecEnv<AgileFlightEnv>::getRewardNames)
+    .def("getExtraInfoNames", &AgileFlightVecEnv<AgileFlightEnv>::getExtraInfoNames)
+    .def("getCodeBuildTime", &AgileFlightVecEnv<AgileFlightEnv>::getCodeBuildTime)
+    .def("setCollisionStopNum", &AgileFlightVecEnv<AgileFlightEnv>::setCollisionStopNum)
+    .def("__repr__", [](const AgileFlightVecEnv<AgileFlightEnv>& a) {
+      return "RPG based Agile Flight Environment";
     });
 }

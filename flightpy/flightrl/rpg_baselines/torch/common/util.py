@@ -120,13 +120,13 @@ def test_policy(env, model, render=False):
             # cv2.waitKey(100)
 
             # ======RGB Image=========
-            # img =env.getImage(rgb=True) 
-            # rgb_img = np.reshape(
-            #    img[0], (env.img_height, env.img_width, 3))
-            # cv2.imshow("rgb_img", rgb_img)
+            img =env.getImage(rgb=True)
+            rgb_img = np.reshape(
+               img[0], (env.img_height, env.img_width, 3))
+            cv2.imshow("rgb_img", rgb_img)
             # os.makedirs("./images", exist_ok=True)
             # cv2.imwrite("./images/img_{0:05d}.png".format(frame_id), rgb_img)
-            # cv2.waitKey(100)
+            cv2.waitKey(40)
 
             # # # ======Depth Image=========
             # depth_img = np.reshape(env.getDepthImage()[
@@ -139,6 +139,9 @@ def test_policy(env, model, render=False):
             #
             ep_len += 1
             frame_id += 1
+        o = env._unnormalize_obs(obs,env.obs_rms)
+        # print(o[0][0:14])
+        print(info[0])
 
     #
     if render:

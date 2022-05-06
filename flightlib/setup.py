@@ -19,28 +19,28 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def run(self):
-        FLIGHTLIB_EXTERNAL_FILES = os.environ["FLIGHTMARE_PATH"] + \
-            "/flightlib/externals/"
-        # --------------------------------
-        # remove cached external files
-        # a hack to solve some cmake error when using "pip install ."
-        try:
-            for i, p in enumerate(glob.glob(os.path.join(FLIGHTLIB_EXTERNAL_FILES, "*"))):
-                shutil.rmtree(p)
-                print("Removing some cache file: ", p)
-        except:
-            pass
-        FLIGHTLIB_BUILD_FILES = os.environ["FLIGHTMARE_PATH"] + \
-            "/flightlib/build/"
-        # --------------------------------
-        # remove cached files
-        # a hack to solve some cmake error when using "pip install ."
-        try:
-            for i, p in enumerate(glob.glob(os.path.join(FLIGHTLIB_BUILD_FILES, "*"))):
-                shutil.rmtree(p)
-                print("Removing some cache file: ", p)
-        except:
-            pass
+        # FLIGHTLIB_EXTERNAL_FILES = os.environ["FLIGHTMARE_PATH"] + \
+        #     "/flightlib/externals/"
+        # # --------------------------------
+        # # remove cached external files
+        # # a hack to solve some cmake error when using "pip install ."
+        # try:
+        #     for i, p in enumerate(glob.glob(os.path.join(FLIGHTLIB_EXTERNAL_FILES, "*"))):
+        #         shutil.rmtree(p)
+        #         print("Removing some cache file: ", p)
+        # except:
+        #     pass
+        # FLIGHTLIB_BUILD_FILES = os.environ["FLIGHTMARE_PATH"] + \
+        #     "/flightlib/build/"
+        # # --------------------------------
+        # # remove cached files
+        # # a hack to solve some cmake error when using "pip install ."
+        # try:
+        #     for i, p in enumerate(glob.glob(os.path.join(FLIGHTLIB_BUILD_FILES, "*"))):
+        #         shutil.rmtree(p)
+        #         print("Removing some cache file: ", p)
+        # except:
+        #     pass
         # --------------------------------
 
         try:
@@ -78,7 +78,7 @@ class CMakeBuild(build_ext):
             build_args += ['--', '/m']
         else:
             cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-            build_args += ['--', '-j4']
+            build_args += ['--', '-j20']
 
         env = os.environ.copy()
         env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
@@ -93,7 +93,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='flightgym',
-    version='0.0.1',
+    version='0.1.2',
     author='Yunlong Song',
     author_email='song@ifi.uzh.ch',
     description='Flightmare: A Quadrotor Simulator.',

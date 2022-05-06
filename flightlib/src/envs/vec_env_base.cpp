@@ -59,7 +59,7 @@ void VecEnvBase<EnvBaseName>::configEnv(const YAML::Node& cfg_node) {
     extra_info_names_.push_back(re.first);
   }
   logger_.info("%d vectorized enviromnets created. ", num_envs_);
-  std::cout << "Vectorized Environment:\n"
+  std::cout << "[zty]Vectorized Environment:\n"
             << "obs dim    =            [" << obs_dim_ << "]\n"
             << "act dim    =            [" << act_dim_ << "]\n"
             << "rew dim    =            [" << rew_dim_ << "]\n"
@@ -275,5 +275,7 @@ void VecEnvBase<EnvBaseName>::curriculumUpdate(void) {
 template class VecEnvBase<QuadrotorEnv>;
 //
 template class VecEnvBase<VisionEnv>;
+//
+template class VecEnvBase<AgileFlightEnv>;
 
 }  // namespace flightlib
