@@ -107,12 +107,15 @@ class AgileFlightEnv final : public EnvBase {
 
   std::unordered_map<std::string, float> extra_info_{
     {"success",0.0},{"outBox",0.0},{"outtime",0.0},{"collision_count",0.0},
-    {"final_pose_x",0.0},{"final_pose_y",0.0},{"final_pose_z",0.0},
-    {"success_noCollision",0.0},{"collision_stop",0.0},
-    {"time_exp_factor",0.0}    
+    {"final_pose_x",0.0}, //{"final_pose_y",0.0},{"final_pose_z",0.0},
+    {"success_noCollision",0.0},{"collision_stop_num",0.0},
+    {"time_exp_factor",0.0},{"collision_stop",0.0}
     };
 
   bool setCollisionStopNum(int num);
+
+  bool setCoefficient(std::string st, Scalar value);
+  Scalar getCoefficient(std::string st);
 
  private:
   bool computeReward(Ref<Vector<>> reward);
@@ -130,7 +133,7 @@ class AgileFlightEnv final : public EnvBase {
 
   // Define reward for training
   Scalar vel_coeff_, collision_coeff_, angular_vel_coeff_, su_time_exp_coeff_,
-  su_coll_exp_coeff_,
+  su_coll_exp_coeff_, su_dist_exp_coeff_,
   collision_exp_coeff_,  dist_margin_, success_rew_, survive_rew_;
   Vector<3> goal_linear_vel_;
 
@@ -141,8 +144,8 @@ class AgileFlightEnv final : public EnvBase {
   // flag
   int terminalState_ = 0; //run:0   ;colli:1    ;succ: 2  ;outtime: 3   ;outbox: 4;
   bool outBox_flag_ = false;
-  bool is_collision_;
-  int collision_stop_ = -1;
+  bool is_collision_ = false, allow_rewrite_paras_ = false;
+  int collision_stop_num_ = -1;
 
   // max detection range (meter)
   Scalar max_detection_range_;

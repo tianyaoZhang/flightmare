@@ -127,6 +127,8 @@ PYBIND11_MODULE(flightgym, m) {
     .def("getExtraInfoNames", &AgileFlightVecEnv<AgileFlightEnv>::getExtraInfoNames)
     .def("getCodeBuildTime", &AgileFlightVecEnv<AgileFlightEnv>::getCodeBuildTime)
     .def("setCollisionStopNum", &AgileFlightVecEnv<AgileFlightEnv>::setCollisionStopNum)
+    .def("getCoefficient", &AgileFlightVecEnv<AgileFlightEnv>::getCoefficient)
+    .def("setCoefficient", &AgileFlightVecEnv<AgileFlightEnv>::setCoefficient)
     .def("__repr__", [](const AgileFlightVecEnv<AgileFlightEnv>& a) {
       return "RPG based Agile Flight Environment";
     });

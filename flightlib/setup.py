@@ -93,7 +93,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='flightgym',
-    version='0.1.2',
+    version='0.2.2',
     author='Yunlong Song',
     author_email='song@ifi.uzh.ch',
     description='Flightmare: A Quadrotor Simulator.',

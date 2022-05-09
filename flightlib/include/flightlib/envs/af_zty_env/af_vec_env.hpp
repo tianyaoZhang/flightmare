@@ -33,10 +33,12 @@ class AgileFlightVecEnv : public VecEnvBase<EnvBaseName> {
   };
 
   // code build time version
-  std::string getCodeBuildTime() {return "[2022-05-06-20:02]";}
+  std::string getCodeBuildTime() {return "[2022-05-09-15:57]";}
 
   // set collision ealy stop
   bool setCollisionStopNum(int num);
+  bool setCoefficient(std::string st, Scalar value);
+  Scalar getCoefficient(std::string st);
 
  private:
   void perAgentStep(int agent_id, Ref<MatrixRowMajor<>> act,

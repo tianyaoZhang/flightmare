@@ -321,11 +321,14 @@ bool AgileFlightEnv::computeReward(Ref<Vector<>> reward) {
   }
 
   // reach the target x-position  std::exp(su_time_exp_coeff * (max_t_ - quad_state_.t)/(collision_count_+1) )
-  success_factor_ = std::exp(su_time_exp_coeff_ * (max_t_ - quad_state_.t)) 
-                    * su_coll_exp_coeff_/std::exp(collision_count_+1);
-  const Scalar success_reward = quad_state_.p.x() >= goal_target_
-      ? success_rew_ * success_factor_
-      : 0;
+
+  float succ_dis_factor_ = quad_state_.p.x()>0? std::exp(su_dist_exp_coeff_ * (goal_target_ - quad_state_.p.x())/goal_target_) : 0;
+  success_factor_ = succ_dis_factor_ * std::exp(su_time_exp_coeff_ * (max_t_ - quad_state_.t)) 
+                    * su_coll_exp_coeff_/std::exp(collision_count_);
+  const Scalar success_reward = success_factor_ * success_rew_;
+  // const Scalar success_reward = quad_state_.p.x() >= goal_target_
+  //     ? success_rew_ * success_factor_
+  //     : 0;
 
   // // - tracking a constant linear velocity
   // Scalar lin_vel_reward =
@@ -347,7 +350,7 @@ bool AgileFlightEnv::computeReward(Ref<Vector<>> reward) {
 
 bool AgileFlightEnv::isTerminalState(Scalar &reward) {
   // if (is_collision_ ) {
-  if ((collision_count_ >= collision_stop_)  && (collision_stop_ != -1)) {
+  if ((collision_count_ >= collision_stop_num_)  && (collision_stop_num_ != -1)) {
     reward = -success_rew_ ;
     terminalState_ = 1;
     return true;
@@ -462,8 +465,9 @@ bool AgileFlightEnv::loadParam(const YAML::Node &cfg) {
     max_detection_range_ =
       cfg["environment"]["max_detection_range"].as<Scalar>();
     goal_target_ = cfg["environment"]["target"] ?  cfg["environment"]["target"].as<Scalar>(): 0 ;
-    collision_stop_ = cfg["environment"]["collision_stop"].as<int>();
-    // logger_.info(collision_stop_? "true":"false");
+    collision_stop_num_ = cfg["environment"]["collision_stop_num"].as<int>();
+    allow_rewrite_paras_ = cfg["environment"]["allow_rewrite_paras"].as<bool>();
+    // logger_.info(collision_stop_num_? "true":"false");
   }
 
   if (cfg["simulation"]) {
@@ -483,6 +487,7 @@ bool AgileFlightEnv::loadParam(const YAML::Node &cfg) {
     success_rew_ = cfg["rewards"]["success_rew"].as<Scalar>();    
     su_time_exp_coeff_ = cfg["rewards"]["su_time_exp_coeff"].as<Scalar>();
     su_coll_exp_coeff_ = cfg["rewards"]["su_coll_exp_coeff"].as<Scalar>();
+    su_dist_exp_coeff_ = cfg["rewards"]["su_dist_exp_coeff"].as<Scalar>();
     dist_margin_ = cfg["rewards"]["collision_dist_margin"].as<Scalar>();
     collision_exp_coeff_ = cfg["rewards"]["collision_exp_coeff"].as<Scalar>();
 
@@ -755,8 +760,8 @@ void AgileFlightEnv::updateExtraInfo() {
   extra_info_["success"] = succ;
   extra_info_["success_noCollision"] = is_collision_? 0.0:succ;
   extra_info_["final_pose_x"] =  quad_state_.p.x();
-  extra_info_["final_pose_y"] =  quad_state_.p.y();
-  extra_info_["final_pose_z"] =  quad_state_.p.z();
+  // extra_info_["final_pose_y"] =  quad_state_.p.y();
+  // extra_info_["final_pose_z"] =  quad_state_.p.z();
 
   extra_info_["collision_stop"] =  terminalState_ == 1? 1.0: 0.0;
 
@@ -766,12 +771,59 @@ void AgileFlightEnv::updateExtraInfo() {
   extra_info_["outBox"] = outBox_flag_? 1.0 :0.0;
   extra_info_["time_exp_factor"] = success_factor_;
   extra_info_["collision_count"] = collision_count_;
+  extra_info_["collision_stop_num"] = collision_stop_num_;
+
 }
 
 bool AgileFlightEnv::setCollisionStopNum(int num){
-  collision_stop_ = num;
-  logger_.info("[collision_stop_] is set to: "+std::to_string(num));
+  collision_stop_num_ = num;
+  logger_.info("[collision_stop_num_] is set to: "+std::to_string(num));
   return true;
+}
+
+bool AgileFlightEnv::setCoefficient(std::string st, Scalar value){
+  bool succ = false;
+  if (allow_rewrite_paras_) {
+    succ = true;
+    if (st == std::string("collision_coeff")){
+        collision_coeff_ = value;
+        logger_.info("[collision_coeff_] is set to: "+std::to_string(collision_coeff_));
+    }
+    else if (st == std::string("su_dist_exp_coeff")){
+        su_dist_exp_coeff_ = value;
+        logger_.info("[su_dist_exp_coeff_] is set to: "+std::to_string(su_dist_exp_coeff_));
+    }
+    else if (st == std::string("collision_stop_num")){
+        collision_stop_num_ = int(value);
+        logger_.info("[collision_stop_num_] is set to: "+std::to_string(collision_stop_num_));
+    }
+    else {
+      succ = false;
+    }
+
+    
+  }
+  return succ;
+}
+
+Scalar AgileFlightEnv::getCoefficient(std::string st){
+
+  if (st == std::string("collision_coeff")){
+      // collision_coeff_ = value;
+      logger_.info("[collision_coeff_] carry value: "+std::to_string(collision_coeff_));
+      return collision_coeff_;
+  }
+  else if (st == std::string("su_dist_exp_coeff")){
+      logger_.info("[su_dist_exp_coeff_] carry value: "+std::to_string(su_dist_exp_coeff_));
+      return su_dist_exp_coeff_;
+  }
+  else if (st == std::string("collision_stop_num")){
+      logger_.info("[collision_stop_num_] carry value: "+std::to_string(collision_stop_num_));
+      return collision_stop_num_;
+  }
+
+
+  return -404;
 }
 
 }  // namespace flightlib

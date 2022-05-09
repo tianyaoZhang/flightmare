@@ -165,6 +165,22 @@ bool AgileFlightVecEnv<EnvBaseName>::setCollisionStopNum(int num) {
   return valid;
 }
 
+template<typename EnvBaseName>
+bool AgileFlightVecEnv<EnvBaseName>::setCoefficient(std::string st, Scalar value) {
+  bool valid = true;
+  for (int i = 0; i < this->num_envs_; i++) {
+    valid &= this->envs_[i]->setCoefficient(st,value);
+  }
+  return valid;
+}
+
+
+template<typename EnvBaseName>
+Scalar AgileFlightVecEnv<EnvBaseName>::getCoefficient(std::string st){  
+  return this->envs_[0]->getCoefficient(st);
+}
+
+
 
 // IMPORTANT. Otherwise:
 // Linker errors because of the separation between the
