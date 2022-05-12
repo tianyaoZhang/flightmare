@@ -100,7 +100,7 @@ bool AgileFlightEnv::reset(Ref<Vector<>> obs) {
   is_collision_ = false;
   collision_count_ = 0;
 
-  outBox_flag_ = false;
+  terminalState_ = 0;
 
   // randomly reset the quadrotor state
   // reset position
@@ -320,12 +320,22 @@ bool AgileFlightEnv::computeReward(Ref<Vector<>> reward) {
     idx += 1;
   }
 
-  // reach the target x-position  std::exp(su_time_exp_coeff * (max_t_ - quad_state_.t)/(collision_count_+1) )
+  // check state
+  int statechecked = checkState();
 
+  // reach the target x-position  std::exp(su_time_exp_coeff * (max_t_ - quad_state_.t)/(collision_count_+1) )
+  float succ_dis_reward = std::exp(su_dist_exp_coeff_ * (goal_target_ - quad_state_.p.x())/goal_target_);
+  
+  // success_factor_ = std::exp(su_time_exp_coeff_ * (max_t_ - quad_state_.t)/max_t_) 
+  //                   // * (0.1 - collision_count_*collision_count_/collision_stop_num_*collision_stop_num_);
+
+  //                   + (collision_count_ >1 ? su_coll_coeff_*std::exp(su_coll_exp_coeff_ * collision_count_):0);
   float succ_dis_factor_ = quad_state_.p.x()>0? std::exp(su_dist_exp_coeff_ * (goal_target_ - quad_state_.p.x())/goal_target_) : 0;
-  success_factor_ = succ_dis_factor_ * std::exp(su_time_exp_coeff_ * (max_t_ - quad_state_.t)) 
-                    * su_coll_exp_coeff_/std::exp(collision_count_);
-  const Scalar success_reward = success_factor_ * success_rew_;
+  success_factor_ = succ_dis_factor_ * std::exp(su_time_exp_coeff_ * (max_t_ - quad_state_.t)/max_t_) 
+                    * su_coll_coeff_*std::exp(su_coll_exp_coeff_ * collision_count_);
+  // const Scalar success_reward = success_factor_ * success_rew_;
+
+  const Scalar success_reward = (statechecked ==2 )? success_rew_ * success_factor_: 0;
   // const Scalar success_reward = quad_state_.p.x() >= goal_target_
   //     ? success_rew_ * success_factor_
   //     : 0;
@@ -339,36 +349,17 @@ bool AgileFlightEnv::computeReward(Ref<Vector<>> reward) {
 
   //  change progress reward as survive reward
   const Scalar total_reward =
-    success_reward + collision_penalty + ang_vel_penalty + survive_rew_;
+    success_reward + succ_dis_reward + collision_penalty + ang_vel_penalty + survive_rew_;
 
   // return all reward components for debug purposes
   // only the total reward is used by the RL algorithm
-  reward << success_reward , collision_penalty, ang_vel_penalty, survive_rew_,
+  reward << success_reward ,succ_dis_reward, collision_penalty, ang_vel_penalty, survive_rew_,
     total_reward;
   return true;
 }
 
-bool AgileFlightEnv::isTerminalState(Scalar &reward) {
-  // if (is_collision_ ) {
-  if ((collision_count_ >= collision_stop_num_)  && (collision_stop_num_ != -1)) {
-    reward = -success_rew_ ;
-    terminalState_ = 1;
-    return true;
-  }
-  // successfully reach the target x-position
-  if(quad_state_.p.x() >= goal_target_){
-    reward = success_rew_ ;
-    terminalState_ = 2;
-    return true;
-  }
-
-  // simulation time out
-  if (cmd_.t >= max_t_ - sim_dt_) {
-    reward = -success_rew_ ;
-    terminalState_ = 3;
-    return true;
-  }
-
+//run:0   ;colli:1    ;succ: 2  ;outtime: 3   ;outbox: 4;
+int AgileFlightEnv::checkState() {  
   // world boundling box check
   // - x, y, and z
   const Scalar safty_threshold = 0.1;
@@ -379,15 +370,77 @@ bool AgileFlightEnv::isTerminalState(Scalar &reward) {
   bool z_valid = quad_state_.x(QS::POSZ) >= world_box_[4] + safty_threshold &&
                  quad_state_.x(QS::POSZ) <= world_box_[5] - safty_threshold;
   if (!x_valid || !y_valid || !z_valid) {
-    reward = -success_rew_*2;
-    outBox_flag_ = true;
-
     terminalState_ = 4;
-    return true;
   }
-  outBox_flag_ = false;
-  terminalState_ = 0;
-  return false;
+  else if ((collision_count_ >= collision_stop_num_)  && (collision_stop_num_ != -1)) {
+    terminalState_ = 1;
+  }
+  // simulation time out
+  else if (cmd_.t >= max_t_ - sim_dt_) {
+    terminalState_ = 3;
+  }
+  // successfully reach the target x-position
+  else if(quad_state_.p.x() >= goal_target_){
+    terminalState_ = 2;
+  }
+  else {
+    terminalState_ = 0;
+  }
+  return terminalState_;
+} 
+
+bool AgileFlightEnv::isTerminalState(Scalar &reward) {
+  int statechecked = checkState();
+  if (statechecked == 0){
+    return false;
+  }
+  // if success without so called collision
+  else if (statechecked == 2){
+    reward = success_rew_;
+  }
+  else {
+    reward = -success_rew_;
+  }
+  return true;
+  // // if (is_collision_ ) {
+  // if ((collision_count_ >= collision_stop_num_)  && (collision_stop_num_ != -1)) {
+  //   reward = -success_rew_ ;
+  //   terminalState_ = 1;
+  //   return true;
+  // }
+  // // successfully reach the target x-position
+  // if(quad_state_.p.x() >= goal_target_){
+  //   reward = success_rew_ ;
+  //   terminalState_ = 2;
+  //   return true;
+  // }
+
+  // // simulation time out
+  // if (cmd_.t >= max_t_ - sim_dt_) {
+  //   reward = -success_rew_ ;
+  //   terminalState_ = 3;
+  //   return true;
+  // }
+
+  // // world boundling box check
+  // // - x, y, and z
+  // const Scalar safty_threshold = 0.1;
+  // bool x_valid = quad_state_.p(QS::POSX) >= world_box_[0] + safty_threshold &&
+  //                quad_state_.p(QS::POSX) <= world_box_[1] - safty_threshold;
+  // bool y_valid = quad_state_.p(QS::POSY) >= world_box_[2] + safty_threshold &&
+  //                quad_state_.p(QS::POSY) <= world_box_[3] - safty_threshold;
+  // bool z_valid = quad_state_.x(QS::POSZ) >= world_box_[4] + safty_threshold &&
+  //                quad_state_.x(QS::POSZ) <= world_box_[5] - safty_threshold;
+  // if (!x_valid || !y_valid || !z_valid) {
+  //   reward = -success_rew_*2;
+  //   outBox_flag_ = true;
+
+  //   terminalState_ = 4;
+  //   return true;
+  // }
+  // outBox_flag_ = false;
+  // terminalState_ = 0;
+  // return false;
 }
 
 
@@ -487,6 +540,7 @@ bool AgileFlightEnv::loadParam(const YAML::Node &cfg) {
     success_rew_ = cfg["rewards"]["success_rew"].as<Scalar>();    
     su_time_exp_coeff_ = cfg["rewards"]["su_time_exp_coeff"].as<Scalar>();
     su_coll_exp_coeff_ = cfg["rewards"]["su_coll_exp_coeff"].as<Scalar>();
+    su_coll_coeff_ = cfg["rewards"]["su_coll_coeff"].as<Scalar>();
     su_dist_exp_coeff_ = cfg["rewards"]["su_dist_exp_coeff"].as<Scalar>();
     dist_margin_ = cfg["rewards"]["collision_dist_margin"].as<Scalar>();
     collision_exp_coeff_ = cfg["rewards"]["collision_exp_coeff"].as<Scalar>();
@@ -756,22 +810,19 @@ std::ostream &operator<<(std::ostream &os, const AgileFlightEnv &vision_env) {
 }
 
 void AgileFlightEnv::updateExtraInfo() {
-  float succ = quad_state_.p.x() >= goal_target_ ? 1.0: 0.0;
-  extra_info_["success"] = succ;
+  extra_info_["1_collision"] =  terminalState_==1? 1.0: 0.0;
+  float succ = terminalState_==2 ? 1.0: 0.0;
+  extra_info_["2_success"] = succ;
   extra_info_["success_noCollision"] = is_collision_? 0.0:succ;
+  extra_info_["3_outtime"] = terminalState_==3? 1.0: 0.0;
+  extra_info_["4_outBox"] = terminalState_ == 4? 1.0 :0.0;
+
   extra_info_["final_pose_x"] =  quad_state_.p.x();
   // extra_info_["final_pose_y"] =  quad_state_.p.y();
   // extra_info_["final_pose_z"] =  quad_state_.p.z();
-
-  extra_info_["collision_stop"] =  terminalState_ == 1? 1.0: 0.0;
-
-  // extra_info_.insert(std::make_pair("success", succ));
-  float outtime_value = (cmd_.t >= max_t_ - sim_dt_) ? 1.0: 0.0;
-  extra_info_["outtime"] = outtime_value;
-  extra_info_["outBox"] = outBox_flag_? 1.0 :0.0;
   extra_info_["time_exp_factor"] = success_factor_;
   extra_info_["collision_count"] = collision_count_;
-  extra_info_["collision_stop_num"] = collision_stop_num_;
+  // extra_info_["collision_stop_num"] = collision_stop_num_; // already in getCoefficient
 
 }
 
@@ -787,21 +838,22 @@ bool AgileFlightEnv::setCoefficient(std::string st, Scalar value){
     succ = true;
     if (st == std::string("collision_coeff")){
         collision_coeff_ = value;
-        logger_.info("[collision_coeff_] is set to: "+std::to_string(collision_coeff_));
+        // logger_.info("[collision_coeff_] is set to: "+std::to_string(collision_coeff_));
     }
-    else if (st == std::string("su_dist_exp_coeff")){
-        su_dist_exp_coeff_ = value;
-        logger_.info("[su_dist_exp_coeff_] is set to: "+std::to_string(su_dist_exp_coeff_));
+    else if (st == std::string("su_coll_coeff")){
+        su_coll_coeff_ = value;
+        // logger_.info("[su_coll_coeff_] is set to: "+std::to_string(su_coll_coeff_));
     }
     else if (st == std::string("collision_stop_num")){
-        collision_stop_num_ = int(value);
-        logger_.info("[collision_stop_num_] is set to: "+std::to_string(collision_stop_num_));
+        collision_stop_num_ = value;
+        // logger_.info("[collision_stop_num_] is set to: "+std::to_string(collision_stop_num_));
     }
     else {
       succ = false;
     }
-
-    
+    // std::string child = st+"_";
+    // this->(*child) = value;
+    // logger_.info("["+st+"] is set to: "+std::to_string(this->(*child)));    
   }
   return succ;
 }
@@ -813,14 +865,22 @@ Scalar AgileFlightEnv::getCoefficient(std::string st){
       logger_.info("[collision_coeff_] carry value: "+std::to_string(collision_coeff_));
       return collision_coeff_;
   }
-  else if (st == std::string("su_dist_exp_coeff")){
-      logger_.info("[su_dist_exp_coeff_] carry value: "+std::to_string(su_dist_exp_coeff_));
-      return su_dist_exp_coeff_;
+  else if (st == std::string("su_coll_coeff")){
+      logger_.info("[su_coll_coeff_] carry value: "+std::to_string(su_coll_coeff_));
+      return su_coll_coeff_;
   }
   else if (st == std::string("collision_stop_num")){
       logger_.info("[collision_stop_num_] carry value: "+std::to_string(collision_stop_num_));
       return collision_stop_num_;
   }
+  // else if (st == std::string("collision_stop_num")){
+  //     logger_.info("[collision_coeff_] carry value: "+std::to_string(collision_coeff_));
+  //     return collision_stop_num_;
+  // }
+  // std::string child = st+"_";
+  // logger_.info("["+st+"] carry value: "+std::to_string(this->(*child)));
+  // return this->(*child);
+  
 
 
   return -404;

@@ -25,7 +25,7 @@ AgileFlightVecEnv<EnvBaseName>::AgileFlightVecEnv(const std::string& cfg,
   configEnv(cfg_);
 
   logger_.info(getCodeBuildTime());
-  std::cout << cfg_<< std::endl;
+  // std::cout << cfg_<< std::endl;
   // this->logger_.info('[%s] Created Vecterized Env %s',(from_file? "true":"false"), cfg);
 }
 
@@ -171,13 +171,14 @@ bool AgileFlightVecEnv<EnvBaseName>::setCoefficient(std::string st, Scalar value
   for (int i = 0; i < this->num_envs_; i++) {
     valid &= this->envs_[i]->setCoefficient(st,value);
   }
+  logger_.info("["+st+"]x"+std::to_string(this->num_envs_)+" is set to: "+std::to_string(value));
   return valid;
 }
 
 
 template<typename EnvBaseName>
-Scalar AgileFlightVecEnv<EnvBaseName>::getCoefficient(std::string st){  
-  return this->envs_[0]->getCoefficient(st);
+Scalar AgileFlightVecEnv<EnvBaseName>::getCoefficient(std::string st,int id){  
+  return this->envs_[id]->getCoefficient(st);
 }
 
 

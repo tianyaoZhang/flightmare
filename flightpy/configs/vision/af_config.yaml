@@ -7,22 +7,32 @@ environment:
   max_detection_range: 10.0 # max obstacle detection range [m], obstacles outside this range will not be detected. The number of obstacles detected is fixed to 10, if less than 10 obstacles are within detectable range, the observation is padded with 10.0
   target: 60 # goal distance in x-direction, must be INTEGER
   collision_stop_num: 10
-  allow_rewrite_paras: yes
+  allow_rewrite_paras: true   # c++, must true or yes
+  enable_random_reset: true  #  for training
 
 PPO:
   device: "cuda:0"
   activation: "ReLU"
   optimizer: "Adam"
+  buffer_steps: 1500
+  iterations: 1000
+  # for callback
+  en_eval_during_traing: 0 # 1: true; 0: false ; true or false also works, but always with typos
+  enable_early_stop: 0 # 1: true; 0: false
+  en_track_metric: 0  # track Success Rate on three level with random env_folder
+  n_eval_episodes: 20
+  check_freq: 10
 
 HParams:
 
 
 rewards:
   #  positive or negative is really important. --zty
-  success_rew: 10
-  su_time_exp_coeff: 0.02
-  su_coll_exp_coeff: 2
-  su_dist_exp_coeff: -5
+  success_rew: 10   #  if 1 then not work
+  su_time_exp_coeff: 0.9
+  su_coll_exp_coeff: -1
+  su_coll_coeff: 2  # ord version is not the exp coeff
+  su_dist_exp_coeff: -3
   # collision
   collision_dist_margin: 0.3
   collision_exp_coeff: -3.0
@@ -32,6 +42,7 @@ rewards:
   names:
     [
       "success_reward",
+      "distance_reward",
       "collision_penalty",
       "ang_vel_penalty",
       "survive_rew",
@@ -58,7 +69,7 @@ simulation:
   seed: 1
   sim_dt: 0.02
   max_t: 30.0    # same as evaluation time set; 20->30
-  num_envs: 100 
+  num_envs: 100
   num_threads: 10
 
 quadrotor_dynamics:
